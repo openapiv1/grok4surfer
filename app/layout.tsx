@@ -3,32 +3,20 @@ import "@/styles/globals.css";
 import { Metadata } from "next";
 import { Toaster } from "sonner";
 import { Providers } from "../components/providers";
-import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { ChatProvider } from "@/lib/chat-context";
 import { Analytics } from "@vercel/analytics/react";
 
-const ibmPlexSans = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-ibm-plex-sans",
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-ibm-plex-mono",
-});
-
 export const metadata: Metadata = {
-  title: "Surf - E2B Computer Use Agent",
+  title: "Surf - E2B Computer Use Agent (Powered by Grok)",
   description:
-    "AI agent that interacts with a virtual desktop environment through natural language instructions",
+    "AI agent that interacts with a virtual desktop environment through natural language instructions using Grok AI",
   keywords: [
     "AI",
     "desktop",
     "automation",
     "E2B",
-    "OpenAI",
+    "Grok",
+    "xAI",
     "virtual desktop",
     "sandbox",
   ],
@@ -43,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}
+        className="font-sans"
         suppressHydrationWarning
       >
         <Providers>
