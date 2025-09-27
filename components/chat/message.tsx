@@ -143,7 +143,7 @@ export function ChatMessage({ message, className }: ChatMessageProps) {
   };
 
   const roleLabel = isUser ? "You" : isAssistant ? 
-    (message as AssistantChatMessage).model === "grok" ? "Grok" : 
+    (message as AssistantChatMessage).model === "grok" ? "Grok-4" : 
     (message as AssistantChatMessage).model === "openai" ? "OpenAI" : 
     "Assistant" : "System";
 
