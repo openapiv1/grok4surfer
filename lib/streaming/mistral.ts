@@ -1,4 +1,5 @@
 import { Sandbox } from "@e2b/desktop";
+import { MockSandbox } from "@/lib/mock-sandbox";
 import { createMistral } from "@ai-sdk/mistral";
 import { SSEEventType, SSEEvent, MistralAction } from "@/types/api";
 import {
@@ -79,14 +80,14 @@ export class MistralComputerStreamer
   implements ComputerInteractionStreamerFacade
 {
   public instructions: string;
-  public desktop: Sandbox;
+  public desktop: Sandbox | MockSandbox;
   public resolutionScaler: ResolutionScaler;
 
   private mistral: ReturnType<typeof createMistral>;
   private screenshotModel: string = "pixtral-large-latest";
   private actionModel: string = "mistral-small-latest";
 
-  constructor(desktop: Sandbox, resolutionScaler: ResolutionScaler) {
+  constructor(desktop: Sandbox | MockSandbox, resolutionScaler: ResolutionScaler) {
     this.desktop = desktop;
     this.resolutionScaler = resolutionScaler;
     this.mistral = createMistral({

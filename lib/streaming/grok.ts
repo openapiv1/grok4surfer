@@ -1,4 +1,5 @@
 import { Sandbox } from "@e2b/desktop";
+import { MockSandbox } from "@/lib/mock-sandbox";
 import { createXai } from "@ai-sdk/xai";
 import { SSEEventType, SSEEvent, GrokAction } from "@/types/api";
 import {
@@ -59,12 +60,12 @@ export class GrokComputerStreamer
   implements ComputerInteractionStreamerFacade
 {
   public instructions: string;
-  public desktop: Sandbox;
+  public desktop: Sandbox | MockSandbox;
   public resolutionScaler: ResolutionScaler;
 
   private xai: ReturnType<typeof createXai>;
 
-  constructor(desktop: Sandbox, resolutionScaler: ResolutionScaler) {
+  constructor(desktop: Sandbox | MockSandbox, resolutionScaler: ResolutionScaler) {
     this.desktop = desktop;
     this.resolutionScaler = resolutionScaler;
     this.xai = createXai({

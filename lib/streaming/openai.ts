@@ -1,4 +1,5 @@
 import { Sandbox } from "@e2b/desktop";
+import { MockSandbox } from "@/lib/mock-sandbox";
 import { ComputerInteractionStreamerFacade } from "./index";
 import { ResolutionScaler } from "./resolution";
 
@@ -6,10 +7,10 @@ import { ResolutionScaler } from "./resolution";
 // This is not the focus of the current task
 export class OpenAIComputerStreamer implements ComputerInteractionStreamerFacade {
   public instructions: string = "";
-  public desktop: Sandbox;
+  public desktop: Sandbox | MockSandbox;
   public resolutionScaler: ResolutionScaler;
 
-  constructor(desktop: Sandbox, resolutionScaler: ResolutionScaler) {
+  constructor(desktop: Sandbox | MockSandbox, resolutionScaler: ResolutionScaler) {
     this.desktop = desktop;
     this.resolutionScaler = resolutionScaler;
   }
