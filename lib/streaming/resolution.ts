@@ -1,4 +1,5 @@
 import { Sandbox } from "@e2b/desktop";
+import { MockSandbox } from "@/lib/mock-sandbox";
 import {
   MAX_RESOLUTION_WIDTH,
   MAX_RESOLUTION_HEIGHT,
@@ -18,7 +19,7 @@ import sharp from "sharp";
  */
 export class ResolutionScaler {
   // Private properties
-  private desktop: Sandbox;
+  private desktop: Sandbox | MockSandbox;
   private originalResolution: [number, number];
   private scaledResolution: [number, number];
   private scaleFactor: number;
@@ -31,7 +32,7 @@ export class ResolutionScaler {
    * @param desktop - The sandbox instance used for taking screenshots
    * @param originalResolution - The original desktop resolution [width, height]
    */
-  constructor(desktop: Sandbox, originalResolution: [number, number]) {
+  constructor(desktop: Sandbox | MockSandbox, originalResolution: [number, number]) {
     this.desktop = desktop;
     this.originalResolution = originalResolution;
     this.originalAspectRatio = originalResolution[0] / originalResolution[1];

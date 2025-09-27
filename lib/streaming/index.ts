@@ -1,4 +1,5 @@
 import { Sandbox } from "@e2b/desktop";
+import { MockSandbox } from "@/lib/mock-sandbox";
 import { SSEEvent, ActionResponse } from "@/types/api";
 import { ResolutionScaler } from "./resolution";
 import { logDebug } from "../logger";
@@ -14,7 +15,7 @@ export interface ComputerInteractionStreamerFacadeStreamProps {
 
 export abstract class ComputerInteractionStreamerFacade {
   abstract instructions: string;
-  abstract desktop: Sandbox;
+  abstract desktop: Sandbox | MockSandbox;
   abstract resolutionScaler: ResolutionScaler;
 
   abstract stream(

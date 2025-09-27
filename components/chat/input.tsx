@@ -39,7 +39,11 @@ export function ChatInput({
   isLoading,
   onStop,
   disabled = false,
+ copilot/fix-46769aab-f7d4-4694-863e-678a5fcffbce
+  placeholder = "What would you like Mistral to help you with today?",
+
   placeholder = "What would you like Grok-4-fast to help you with today?",
+ main
   className,
 }: ChatInputProps) {
   const { model, setModel } = useChat();

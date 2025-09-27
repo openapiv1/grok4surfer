@@ -24,10 +24,30 @@ interface GrokBashAction {
 
 export type GrokAction = GrokComputerAction | GrokBashAction;
 
+// Mistral-specific action types (similar to Grok but for Mistral)
+interface MistralComputerAction {
+  type: "screenshot" | "click" | "double_click" | "type" | "keypress" | "move" | "scroll" | "wait" | "drag";
+  x?: number;
+  y?: number;
+  text?: string;
+  keys?: string;
+  scroll_y?: number;
+  duration?: number;
+  button?: "left" | "right" | "wheel";
+  path?: Array<{ x: number; y: number }>;
+}
+
+interface MistralBashAction {
+  type: "bash";
+  command: string;
+}
+
+export type MistralAction = MistralComputerAction | MistralBashAction;
+
 /**
  * Model types supported by Surf
  */
-export type ComputerModel = "openai" | "anthropic" | "grok";
+export type ComputerModel = "openai" | "anthropic" | "grok" | "mistral";
 
 /**
  * SSE event types for client communication
@@ -58,6 +78,8 @@ export interface ActionEvent<T extends ComputerModel> extends BaseSSEEvent {
     ? ResponseComputerToolCall["action"]
     : T extends "grok"
     ? GrokAction
+    : T extends "mistral"
+    ? MistralAction
     : ComputerAction;
 }
 
