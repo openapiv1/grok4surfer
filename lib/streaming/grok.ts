@@ -14,22 +14,12 @@ import { generateObject, generateText } from "ai";
 const XAI_API_KEY = "xai-A34glCLmsddLOBzIR6ZkpZvdKiB9CWUT4dZjhlM0So3UsdegvvjegTyvM0vZfHVEILTa0znVMteZfI2V";
 
 const INSTRUCTIONS = `
-You are Surf, a helpful assistant that can use a computer to help the user with their tasks.
-You can use the computer to search the web, write code, and more.
+You are Surf, a helpful AI assistant powered by Grok that can control a virtual computer to help users with their tasks.
+You can see the screen, click on elements, type text, run commands, and more.
 
-Surf is built by E2B, which provides an open source isolated virtual computer in the cloud made for AI use cases.
-This application integrates E2B's desktop sandbox with xAI's Grok API to create an AI agent that can perform tasks
-on a virtual computer through natural language instructions.
-
-The screenshots that you receive are from a running sandbox instance, allowing you to see and interact with a real
-virtual computer environment in real-time.
-
-Since you are operating in a secure, isolated sandbox micro VM, you can execute most commands and operations without
-worrying about security concerns. This environment is specifically designed for AI experimentation and task execution.
-
-The sandbox is based on Ubuntu 22.04 and comes with many pre-installed applications including:
+You are running in an E2B desktop sandbox - a secure Ubuntu 22.04 environment with many pre-installed applications:
 - Firefox browser
-- Visual Studio Code
+- Visual Studio Code  
 - LibreOffice suite
 - Python 3 with common libraries
 - Terminal with standard Linux utilities
@@ -37,27 +27,32 @@ The sandbox is based on Ubuntu 22.04 and comes with many pre-installed applicati
 - Text editor (Gedit)
 - Calculator and other basic utilities
 
-IMPORTANT: It is okay to run terminal commands at any point without confirmation, as long as they are required to fulfill the task the user has given. You should execute commands immediately when needed to complete the user's request efficiently.
+IMPORTANT CONTROL INSTRUCTIONS:
+1. You can see the current screen state through screenshots
+2. To interact with the computer, describe your actions clearly and use these formats:
+   - For clicking: "I'll click at coordinates (x, y)" or "click(x, y)"
+   - For typing: "I'll type 'text here'" or "type('text here')"  
+   - For key presses: "I'll press Enter" or "keypress('Return')"
+   - For bash commands: Use code blocks with bash language identifier
 
-IMPORTANT: When typing commands in the terminal, ALWAYS send a KEYPRESS ENTER action immediately after typing the command to execute it. Terminal commands will not run until you press Enter.
+3. ALWAYS take a screenshot first to see the current state
+4. Be specific about coordinates when clicking - examine the screenshot carefully
+5. When running terminal commands, ALWAYS press Enter after typing the command
+6. Explain what you're doing and why as you work through tasks
+7. Break complex tasks into simple, clear steps
 
-You have access to these computer tools:
-- screenshot: Take a screenshot of the current screen
-- click: Click at specific coordinates
-- double_click: Double-click at specific coordinates  
-- type: Type text
-- keypress: Press specific keys (like Enter, Tab, etc.)
-- move: Move mouse to coordinates
-- scroll: Scroll up or down
-- wait: Wait for a specified duration
-- drag: Drag from one point to another
+COORDINATE SYSTEM:
+- The screen coordinates start at (0,0) in the top-left corner
+- X increases to the right, Y increases downward
+- Always examine the screenshot to find the correct coordinates for UI elements
 
-You also have access to bash commands:
-- command: Execute bash commands in the terminal
+BASH COMMANDS:
+- You can run any Linux command in the terminal
+- Use appropriate commands for the task (ls, cd, mkdir, cp, mv, etc.)
+- Install packages with apt if needed (you have sudo access)
+- Run Python scripts, compile code, etc.
 
-Always be efficient and direct in your actions. Break down complex tasks into simple steps.
-Take screenshots to understand the current state before taking actions.
-Explain what you're doing and why as you work through tasks.
+Remember: You are controlling a real desktop environment. Take screenshots to understand the current state, then take appropriate actions to complete the user's request.
 `;
 
 export class GrokComputerStreamer
@@ -290,71 +285,95 @@ export class GrokComputerStreamer
   private parseActionsFromResponse(response: string): GrokAction[] {
     const actions: GrokAction[] = [];
     
-    // Simple parsing logic - look for action patterns in the response
-    // This is a basic implementation, can be enhanced with more sophisticated parsing
+    // Enhanced parsing logic for better action detection
+    const lines = response.split('\n');
     
-    // Look for bash commands
-    const bashMatches = response.match(/```bash\n([\s\S]*?)\n```/g);
-    if (bashMatches) {
-      bashMatches.forEach(match => {
-        const command = match.replace(/```bash\n/, '').replace(/\n```/, '').trim();
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Look for bash commands in code blocks
+      if (line === '```bash' && i + 1 < lines.length) {
+        let j = i + 1;
+        let command = '';
+        while (j < lines.length && lines[j].trim() !== '```') {
+          if (command) command += '\n';
+          command += lines[j];
+          j++;
+        }
+        if (command.trim()) {
+          actions.push({
+            type: "bash",
+            command: command.trim(),
+          });
+        }
+        i = j; // Skip processed lines
+        continue;
+      }
+      
+      // Look for action commands in text
+      const clickMatch = line.match(/click(?:\s+(?:at|on))?\s*\(?(\d+)\s*,\s*(\d+)\)?/i);
+      if (clickMatch) {
         actions.push({
-          type: "bash",
-          command: command,
+          type: "click",
+          x: parseInt(clickMatch[1]),
+          y: parseInt(clickMatch[2]),
         });
-      });
-    }
-
-    // Look for click actions
-    const clickMatches = response.match(/click\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/gi);
-    if (clickMatches) {
-      clickMatches.forEach(match => {
-        const coords = match.match(/\d+/g);
-        if (coords && coords.length >= 2) {
+        continue;
+      }
+      
+      const typeMatch = line.match(/type\s*\(?\s*['"](.*?)['"]\s*\)?/i);
+      if (typeMatch) {
+        actions.push({
+          type: "type",
+          text: typeMatch[1],
+        });
+        continue;
+      }
+      
+      const keypressMatch = line.match(/(?:press|keypress)\s*\(?\s*['"](.*?)['"]\s*\)?/i);
+      if (keypressMatch) {
+        actions.push({
+          type: "keypress",
+          keys: keypressMatch[1],
+        });
+        continue;
+      }
+      
+      // Look for common action phrases
+      if (line.toLowerCase().includes('take screenshot') || line.toLowerCase().includes('screenshot')) {
+        actions.push({
+          type: "screenshot",
+        });
+        continue;
+      }
+      
+      if (line.toLowerCase().includes('double click') || line.toLowerCase().includes('double-click')) {
+        const coords = line.match(/(\d+)\s*,\s*(\d+)/);
+        if (coords) {
           actions.push({
-            type: "click",
-            x: parseInt(coords[0]),
-            y: parseInt(coords[1]),
+            type: "double_click",
+            x: parseInt(coords[1]),
+            y: parseInt(coords[2]),
           });
         }
-      });
+        continue;
+      }
     }
-
-    // Look for type actions
-    const typeMatches = response.match(/type\s*\(\s*["'](.*?)["']\s*\)/gi);
-    if (typeMatches) {
-      typeMatches.forEach(match => {
-        const textMatch = match.match(/["'](.*?)["']/);
-        if (textMatch) {
-          actions.push({
-            type: "type",
-            text: textMatch[1],
-          });
-        }
-      });
+    
+    // If no specific actions found but response mentions taking action, take a screenshot to continue
+    if (actions.length === 0 && response.length > 50) {
+      const actionKeywords = ['click', 'type', 'open', 'navigate', 'run', 'execute', 'start', 'launch'];
+      const hasActionIntent = actionKeywords.some(keyword => 
+        response.toLowerCase().includes(keyword)
+      );
+      
+      if (hasActionIntent) {
+        actions.push({
+          type: "screenshot",
+        });
+      }
     }
-
-    // Look for keypress actions
-    const keypressMatches = response.match(/keypress\s*\(\s*["'](.*?)["']\s*\)/gi);
-    if (keypressMatches) {
-      keypressMatches.forEach(match => {
-        const keyMatch = match.match(/["'](.*?)["']/);
-        if (keyMatch) {
-          actions.push({
-            type: "keypress",
-            keys: keyMatch[1],
-          });
-        }
-      });
-    }
-
-    // If no specific actions found but we have a response, take a screenshot to continue
-    if (actions.length === 0 && response.length > 0) {
-      actions.push({
-        type: "screenshot",
-      });
-    }
-
+    
     return actions;
   }
 }

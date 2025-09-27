@@ -7,15 +7,16 @@ import { ChatProvider } from "@/lib/chat-context";
 import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
-  title: "Surf - E2B Computer Use Agent",
+  title: "Surf - E2B Computer Use Agent (Powered by Grok)",
   description:
-    "AI agent that interacts with a virtual desktop environment through natural language instructions",
+    "AI agent that interacts with a virtual desktop environment through natural language instructions using Grok AI",
   keywords: [
     "AI",
     "desktop",
     "automation",
     "E2B",
-    "OpenAI",
+    "Grok",
+    "xAI",
     "virtual desktop",
     "sandbox",
   ],
