@@ -6,7 +6,6 @@ import {
   createStreamingResponse,
 } from "@/lib/streaming";
 import { SANDBOX_TIMEOUT_MS } from "@/lib/config";
-import { OpenAIComputerStreamer } from "@/lib/streaming/openai";
 import { GrokComputerStreamer } from "@/lib/streaming/grok";
 import { MistralComputerStreamer } from "@/lib/streaming/mistral";
 import { logError, logDebug } from "@/lib/logger";
@@ -32,7 +31,8 @@ class StreamerFactory {
       /* return new AnthropicComputerStreamer(desktop, resolutionScaler); */
       case "openai":
       default:
-        return new OpenAIComputerStreamer(desktop, resolutionScaler);
+        // Default to Grok since OpenAI streamer is not implemented
+        return new GrokComputerStreamer(desktop, resolutionScaler);
     }
   }
 }
@@ -52,7 +52,11 @@ export async function POST(request: Request) {
     model = "mistral",
   } = await request.json();
 
+ copilot/fix-46769aab-f7d4-4694-863e-678a5fcffbce
   // Hardcoded API key as requested
+
+  // Hardcoded API key as provided - updated to new E2B key
+ main
   const apiKey = "e2b_8a5c7099485b881be08b594be7b7574440adf09c";
 
   if (!apiKey) {

@@ -145,8 +145,12 @@ export function ChatMessage({ message, className }: ChatMessageProps) {
   };
 
   const roleLabel = isUser ? "You" : isAssistant ? 
+ copilot/fix-46769aab-f7d4-4694-863e-678a5fcffbce
     (message as AssistantChatMessage).model === "mistral" ? "Mistral" :
     (message as AssistantChatMessage).model === "grok" ? "Grok" : 
+
+    (message as AssistantChatMessage).model === "grok" ? "Grok-4" : 
+ main
     (message as AssistantChatMessage).model === "openai" ? "OpenAI" : 
     "Assistant" : "System";
 
