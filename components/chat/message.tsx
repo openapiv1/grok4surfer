@@ -20,7 +20,7 @@ import {
 import { useChat } from "@/lib/chat-context";
 import { Badge } from "../ui/badge";
 import { OpenAiLogo } from "@phosphor-icons/react";
-import { AnthropicLogo, GrokLogo } from "../icons";
+import { AnthropicLogo, GrokLogo, MistralLogo } from "../icons";
 
 const messageVariants = cva("", {
   variants: {
@@ -135,6 +135,8 @@ export function ChatMessage({ message, className }: ChatMessageProps) {
         return <OpenAiLogo className="h-3 w-3" />;
       } else if (assistantMessage.model === "grok") {
         return <GrokLogo className="h-3 w-3" />;
+      } else if (assistantMessage.model === "mistral") {
+        return <MistralLogo className="h-3 w-3" />;
       } else {
         return <AnthropicLogo className="h-3 w-3" />;
       }
@@ -143,6 +145,7 @@ export function ChatMessage({ message, className }: ChatMessageProps) {
   };
 
   const roleLabel = isUser ? "You" : isAssistant ? 
+    (message as AssistantChatMessage).model === "mistral" ? "Mistral" :
     (message as AssistantChatMessage).model === "grok" ? "Grok" : 
     (message as AssistantChatMessage).model === "openai" ? "OpenAI" : 
     "Assistant" : "System";

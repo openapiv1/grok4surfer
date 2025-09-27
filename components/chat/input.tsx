@@ -39,7 +39,7 @@ export function ChatInput({
   isLoading,
   onStop,
   disabled = false,
-  placeholder = "What would you like Grok to help you with today?",
+  placeholder = "What would you like Mistral to help you with today?",
   className,
 }: ChatInputProps) {
   const { model, setModel } = useChat();
