@@ -2,7 +2,7 @@
  * Type definitions for chat messages and related functionality
  */
 import { ResponseComputerToolCall } from "openai/resources/responses/responses.mjs";
-import { ActionEvent, ComputerModel, SSEEventType } from "./api";
+import { ActionEvent, ComputerModel, SSEEventType, GrokAction } from "./api";
 import { ComputerAction } from "@/types/anthropic";
 
 /**
@@ -52,6 +52,8 @@ export interface ActionChatMessage<T extends ComputerModel = ComputerModel>
   role: "action";
   action: T extends "openai"
     ? ResponseComputerToolCall["action"]
+    : T extends "grok"
+    ? GrokAction
     : ComputerAction;
   status?: "pending" | "completed" | "failed";
   model: ComputerModel;

@@ -4,10 +4,30 @@
 import { ComputerAction } from "@/types/anthropic";
 import { ResponseComputerToolCall } from "openai/resources/responses/responses.mjs";
 
+// Grok-specific action types
+interface GrokComputerAction {
+  type: "screenshot" | "click" | "double_click" | "type" | "keypress" | "move" | "scroll" | "wait" | "drag";
+  x?: number;
+  y?: number;
+  text?: string;
+  keys?: string;
+  scroll_y?: number;
+  duration?: number;
+  button?: "left" | "right" | "wheel";
+  path?: Array<{ x: number; y: number }>;
+}
+
+interface GrokBashAction {
+  type: "bash";
+  command: string;
+}
+
+export type GrokAction = GrokComputerAction | GrokBashAction;
+
 /**
  * Model types supported by Surf
  */
-export type ComputerModel = "openai" | "anthropic";
+export type ComputerModel = "openai" | "anthropic" | "grok";
 
 /**
  * SSE event types for client communication
@@ -36,6 +56,8 @@ export interface ActionEvent<T extends ComputerModel> extends BaseSSEEvent {
   type: SSEEventType.ACTION;
   action: T extends "openai"
     ? ResponseComputerToolCall["action"]
+    : T extends "grok"
+    ? GrokAction
     : ComputerAction;
 }
 
