@@ -5,7 +5,6 @@ import {
   createStreamingResponse,
 } from "@/lib/streaming";
 import { SANDBOX_TIMEOUT_MS } from "@/lib/config";
-import { OpenAIComputerStreamer } from "@/lib/streaming/openai";
 import { GrokComputerStreamer } from "@/lib/streaming/grok";
 import { logError } from "@/lib/logger";
 import { ResolutionScaler } from "@/lib/streaming/resolution";
@@ -28,7 +27,8 @@ class StreamerFactory {
       /* return new AnthropicComputerStreamer(desktop, resolutionScaler); */
       case "openai":
       default:
-        return new OpenAIComputerStreamer(desktop, resolutionScaler);
+        // Default to Grok since OpenAI streamer is not implemented
+        return new GrokComputerStreamer(desktop, resolutionScaler);
     }
   }
 }
@@ -48,8 +48,8 @@ export async function POST(request: Request) {
     model = "grok",
   } = await request.json();
 
-  // Hardcoded API key as requested
-  const apiKey = "e2b_6f718fcb928ee85abfe16b28ebecc6724d704727";
+  // Hardcoded API key as provided - updated to new E2B key
+  const apiKey = "e2b_8a5c7099485b881be08b594be7b7574440adf09c";
 
   if (!apiKey) {
     return new Response("E2B API key not found", { status: 500 });
