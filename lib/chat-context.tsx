@@ -147,7 +147,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
       ]);
 
       const decoder = new TextDecoder();
-      let assistantMessage = "";
+      let assistantMessage = ""; // Reset for each new conversation
       let buffer = "";
 
       while (true) {
@@ -208,14 +208,32 @@ export function ChatProvider({ children }: ChatProviderProps) {
 
             case SSEEventType.REASONING:
               if (typeof parsedEvent.content === "string") {
-                assistantMessage = parsedEvent.content;
-                const reasoningMessage: AssistantChatMessage = {
-                  role: "assistant",
-                  id: `assistant-${Date.now()}-${messages.length}`,
-                  content: assistantMessage,
-                  model,
-                };
-                setMessages((prev) => [...prev, reasoningMessage]);
+                assistantMessage += parsedEvent.content;
+                
+                setMessages((prev) => {
+                  // Check if the last message is already an assistant message from this conversation
+                  const lastMsg = prev[prev.length - 1];
+                  if (
+                    lastMsg?.role === "assistant" && 
+                    lastMsg.id?.startsWith(`assistant-streaming-${userMessage.id}`)
+                  ) {
+                    // Update the existing message
+                    return prev.map((msg, index) =>
+                      index === prev.length - 1
+                        ? { ...msg, content: assistantMessage }
+                        : msg
+                    );
+                  } else {
+                    // Create a new streaming message
+                    const reasoningMessage: AssistantChatMessage = {
+                      role: "assistant",
+                      id: `assistant-streaming-${userMessage.id}`,
+                      content: assistantMessage,
+                      model,
+                    };
+                    return [...prev, reasoningMessage];
+                  }
+                });
               }
               break;
 

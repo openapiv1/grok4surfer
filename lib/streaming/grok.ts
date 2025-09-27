@@ -8,13 +8,13 @@ import {
 import { ActionResponse } from "@/types/api";
 import { logDebug, logError, logWarning } from "../logger";
 import { ResolutionScaler } from "./resolution";
-import { generateObject, generateText } from "ai";
+import { generateObject, streamText } from "ai";
 
-// Hardcoded XAI API key
+// Hardcoded XAI API key as provided
 const XAI_API_KEY = "xai-A34glCLmsddLOBzIR6ZkpZvdKiB9CWUT4dZjhlM0So3UsdegvvjegTyvM0vZfHVEILTa0znVMteZfI2V";
 
 const INSTRUCTIONS = `
-You are Surf, a helpful AI assistant powered by Grok that can control a virtual computer to help users with their tasks.
+You are Surf, a helpful AI assistant powered by Grok-4-fast-non-reasoning that can control a virtual computer to help users with their tasks.
 You can see the screen, click on elements, type text, run commands, and more.
 
 You are running in an E2B desktop sandbox - a secure Ubuntu 22.04 environment with many pre-installed applications:
@@ -27,32 +27,36 @@ You are running in an E2B desktop sandbox - a secure Ubuntu 22.04 environment wi
 - Text editor (Gedit)
 - Calculator and other basic utilities
 
-IMPORTANT CONTROL INSTRUCTIONS:
-1. You can see the current screen state through screenshots
-2. To interact with the computer, describe your actions clearly and use these formats:
-   - For clicking: "I'll click at coordinates (x, y)" or "click(x, y)"
-   - For typing: "I'll type 'text here'" or "type('text here')"  
-   - For key presses: "I'll press Enter" or "keypress('Return')"
-   - For bash commands: Use code blocks with bash language identifier
+CRITICAL ACTION INSTRUCTIONS:
+1. You MUST take actions to complete user requests - you are not just for conversation
+2. Always start by taking a screenshot to see the current state
+3. Use EXACT action syntax for computer control:
+   - click(x, y) - Click at coordinates
+   - double_click(x, y) - Double click at coordinates  
+   - type("text") - Type text
+   - keypress("key") - Press a key (Return, Tab, Escape, etc.)
+   - For bash commands, use code blocks: \`\`\`bash\ncommand\n\`\`\`
 
-3. ALWAYS take a screenshot first to see the current state
-4. Be specific about coordinates when clicking - examine the screenshot carefully
-5. When running terminal commands, ALWAYS press Enter after typing the command
-6. Explain what you're doing and why as you work through tasks
-7. Break complex tasks into simple, clear steps
+4. COORDINATE SYSTEM: Screen coordinates start at (0,0) in top-left corner
+5. Always examine screenshots carefully to find correct coordinates for UI elements
+6. Execute commands step by step and take screenshots between actions to see results
+7. When running terminal commands, ALWAYS press Enter after typing
+8. Break complex tasks into simple, clear steps
 
-COORDINATE SYSTEM:
-- The screen coordinates start at (0,0) in the top-left corner
-- X increases to the right, Y increases downward
-- Always examine the screenshot to find the correct coordinates for UI elements
+RESPONSE FORMAT:
+- Stream your thoughts and explanations naturally
+- Include specific action commands using the exact syntax above
+- Take screenshots frequently to verify progress
+- Continue until the user's request is fully completed
 
-BASH COMMANDS:
-- You can run any Linux command in the terminal
-- Use appropriate commands for the task (ls, cd, mkdir, cp, mv, etc.)
-- Install packages with apt if needed (you have sudo access)
-- Run Python scripts, compile code, etc.
+SANDBOX CAPABILITIES:
+- Full Linux environment with sudo access
+- Internet connectivity through Firefox
+- Development tools (VS Code, Python, etc.)
+- File system access and manipulation
+- Package installation with apt
 
-Remember: You are controlling a real desktop environment. Take screenshots to understand the current state, then take appropriate actions to complete the user's request.
+Remember: You control a real desktop environment. Take action immediately to help users accomplish their goals.
 `;
 
 export class GrokComputerStreamer
@@ -226,33 +230,49 @@ export class GrokComputerStreamer
           content: `Current screenshot (resolution: ${modelResolution[0]}x${modelResolution[1]}): ${screenshotBase64}`
         });
 
-        // Generate response using Grok
-        const { text: response } = await generateText({
-          model: this.xai("grok-2-1212"),
+        // Generate response using Grok 4 fast non-reasoning with streaming
+        const { textStream } = await streamText({
+          model: this.xai("grok-4-fast-non-reasoning"),
           messages: conversationMessages,
           system: this.instructions,
           maxTokens: 4096,
           temperature: 0.3,
         });
 
-        logDebug("Grok response:", response);
+        logDebug("Starting Grok streaming response");
 
-        // Yield reasoning content
-        if (response) {
+        let fullResponse = "";
+        
+        // Stream the response in real-time
+        for await (const textPart of textStream) {
+          fullResponse += textPart;
+          
+          // Yield each text chunk as it comes in for live streaming
           yield {
             type: SSEEventType.REASONING,
-            content: response,
+            content: textPart,
           };
+          
+          // Check for abort signal during streaming
+          if (signal?.aborted) {
+            yield {
+              type: SSEEventType.DONE,
+              content: "Generation stopped by user",
+            };
+            return;
+          }
         }
 
+        logDebug("Complete Grok response:", fullResponse);
+
         // Parse response for actions
-        const actions = this.parseActionsFromResponse(response);
+        const actions = this.parseActionsFromResponse(fullResponse);
         
         if (actions.length === 0) {
           // No actions found, conversation is complete
           yield {
             type: SSEEventType.DONE,
-            content: response,
+            content: fullResponse,
           };
           break;
         }
@@ -310,8 +330,8 @@ export class GrokComputerStreamer
         continue;
       }
       
-      // Look for action commands in text
-      const clickMatch = line.match(/click(?:\s+(?:at|on))?\s*\(?(\d+)\s*,\s*(\d+)\)?/i);
+      // Enhanced action parsing with exact function syntax
+      const clickMatch = line.match(/click\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/i);
       if (clickMatch) {
         actions.push({
           type: "click",
@@ -320,8 +340,18 @@ export class GrokComputerStreamer
         });
         continue;
       }
+
+      const doubleClickMatch = line.match(/double_click\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+      if (doubleClickMatch) {
+        actions.push({
+          type: "double_click",
+          x: parseInt(doubleClickMatch[1]),
+          y: parseInt(doubleClickMatch[2]),
+        });
+        continue;
+      }
       
-      const typeMatch = line.match(/type\s*\(?\s*['"](.*?)['"]\s*\)?/i);
+      const typeMatch = line.match(/type\s*\(\s*['"](.*?)['"]\s*\)/i);
       if (typeMatch) {
         actions.push({
           type: "type",
@@ -330,11 +360,22 @@ export class GrokComputerStreamer
         continue;
       }
       
-      const keypressMatch = line.match(/(?:press|keypress)\s*\(?\s*['"](.*?)['"]\s*\)?/i);
+      const keypressMatch = line.match(/keypress\s*\(\s*['"](.*?)['"]\s*\)/i);
       if (keypressMatch) {
         actions.push({
           type: "keypress",
           keys: keypressMatch[1],
+        });
+        continue;
+      }
+      
+      // Legacy parsing for natural language actions (fallback)
+      const naturalClickMatch = line.match(/(?:I'll\s+)?click(?:\s+(?:at|on))?\s*(?:coordinates\s*)?\(?(\d+)\s*,\s*(\d+)\)?/i);
+      if (naturalClickMatch && !line.match(/click\s*\(/)) { // Only if not already parsed as function call
+        actions.push({
+          type: "click",
+          x: parseInt(naturalClickMatch[1]),
+          y: parseInt(naturalClickMatch[2]),
         });
         continue;
       }
@@ -344,18 +385,6 @@ export class GrokComputerStreamer
         actions.push({
           type: "screenshot",
         });
-        continue;
-      }
-      
-      if (line.toLowerCase().includes('double click') || line.toLowerCase().includes('double-click')) {
-        const coords = line.match(/(\d+)\s*,\s*(\d+)/);
-        if (coords) {
-          actions.push({
-            type: "double_click",
-            x: parseInt(coords[1]),
-            y: parseInt(coords[2]),
-          });
-        }
         continue;
       }
     }
@@ -372,6 +401,13 @@ export class GrokComputerStreamer
           type: "screenshot",
         });
       }
+    }
+    
+    // Always take a screenshot at the beginning if no actions but content suggests we should continue
+    if (actions.length === 0 && response.length > 100) {
+      actions.push({
+        type: "screenshot",
+      });
     }
     
     return actions;
